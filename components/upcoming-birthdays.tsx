@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "lucide-react";
-import { format, isThisMonth, isToday, isTomorrow, addDays } from "date-fns";
+import { Calendar, ChevronRight } from "lucide-react";
+import { format, isToday, isTomorrow, addDays } from "date-fns";
 import Link from "next/link";
 
 interface Birthday {
   id: string;
   person_name: string;
   birth_date: string;
+  nextBirthday: Date;
 }
 
 export function UpcomingBirthdays({ userId }: { userId: string }) {
@@ -34,15 +35,10 @@ export function UpcomingBirthdays({ userId }: { userId: string }) {
               birthDate.getMonth(),
               birthDate.getDate()
             );
-
-            if (thisYearBirthday < today) {
+            if (thisYearBirthday < today && !isToday(thisYearBirthday)) {
               thisYearBirthday.setFullYear(today.getFullYear() + 1);
             }
-
-            return {
-              ...b,
-              nextBirthday: thisYearBirthday,
-            };
+            return { ...b, nextBirthday: thisYearBirthday };
           })
           .filter((b) => b.nextBirthday <= addDays(today, 30))
           .sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
@@ -50,53 +46,52 @@ export function UpcomingBirthdays({ userId }: { userId: string }) {
         setUpcomingBirthdays(upcoming);
       }
     };
-
     fetchUpcoming();
   }, [userId]);
 
-  const getTimeLabel = (dateStr: string) => {
-    const birthDate = new Date(dateStr);
-    const today = new Date();
-    const thisYearBirthday = new Date(
-      today.getFullYear(),
-      birthDate.getMonth(),
-      birthDate.getDate()
+  const getTimeLabel = (date: Date) => {
+    if (isToday(date))
+      return <span className="text-primary font-black uppercase">Today!</span>;
+    if (isTomorrow(date))
+      return <span className="text-amber-500 font-bold">Tomorrow</span>;
+    return (
+      <span className="text-muted-foreground font-semibold">
+        {format(date, "MMMM d")}
+      </span>
     );
-
-    if (isToday(thisYearBirthday)) return "Today!";
-    if (isTomorrow(thisYearBirthday)) return "Tomorrow";
-    if (isThisMonth(thisYearBirthday))
-      return format(thisYearBirthday, "MMMM d");
-    return format(thisYearBirthday, "MMMM d");
   };
 
   return (
-    <Card>
+    <Card className="glass border-none shadow-none">
       <CardHeader>
-        <CardTitle className="text-2xl flex items-center gap-2">
-          <Calendar className="h-6 w-6 text-accent" />
-          Looking Ahead (30 days)
+        <CardTitle className="text-xl font-bold flex items-center gap-3">
+          <Calendar className="h-5 w-5 text-primary" />
+          Next 30 Days
         </CardTitle>
       </CardHeader>
       <CardContent>
         {upcomingBirthdays.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No upcoming birthdays in the next 30 days
+          <p className="text-sm text-muted-foreground text-center py-8 bg-background/20 rounded-2xl border border-dashed">
+            Quiet month ahead. Relax!
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid gap-2">
             {upcomingBirthdays.map((birthday) => (
               <Link
                 key={birthday.id}
                 href={`/dashboard/birthday/${birthday.id}`}
+                className="group"
               >
-                <div className="p-3 bg-secondary rounded-lg border border-border hover:bg-secondary/80 transition-colors cursor-pointer">
-                  <p className="font-medium text-foreground">
-                    {birthday.person_name}
-                  </p>
-                  <p className="text-sm text-accent">
-                    {getTimeLabel(birthday.birth_date)}
-                  </p>
+                <div className="p-4 bg-background/40 rounded-2xl border border-transparent group-hover:border-primary/20 group-hover:bg-background/80 transition-all flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <p className="font-bold text-lg group-hover:text-primary transition-colors leading-tight">
+                      {birthday.person_name}
+                    </p>
+                    <p className="text-sm">
+                      {getTimeLabel(birthday.nextBirthday)}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                 </div>
               </Link>
             ))}
